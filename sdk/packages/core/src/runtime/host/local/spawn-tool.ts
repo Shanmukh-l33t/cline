@@ -78,11 +78,12 @@ export function createSessionSubAgentLifecycleCallbacks(
 				agentId: context.subAgentId,
 				...agentIdentity,
 			});
-			void deps.invokeBackendOptional(
-				"handleSubAgentStart",
-				rootSessionId,
-				context,
-			);
+			void deps
+				.invokeBackendOptional("handleSubAgentStart", rootSessionId, context)
+				.catch(() => {
+					// Best-effort observer callback; a failing backend must never
+					// surface as an unhandled rejection.
+				});
 		},
 		onSubAgentEnd: (context) => {
 			const teamRuntime = deps.getSession(rootSessionId)?.runtime.teamRuntime;
@@ -109,11 +110,12 @@ export function createSessionSubAgentLifecycleCallbacks(
 				}),
 			});
 			deps.subAgentStarts.delete(context.subAgentId);
-			void deps.invokeBackendOptional(
-				"handleSubAgentEnd",
-				rootSessionId,
-				context,
-			);
+			void deps
+				.invokeBackendOptional("handleSubAgentEnd", rootSessionId, context)
+				.catch(() => {
+					// Best-effort observer callback; a failing backend must never
+					// surface as an unhandled rejection.
+				});
 		},
 	};
 }
