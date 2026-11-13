@@ -16,6 +16,7 @@ import {
 	type ToolApprovalRequest,
 	type ToolApprovalResult,
 	type ToolPolicy,
+	validateWithZod,
 	zodToJsonSchema,
 } from "@cline/shared";
 import { z } from "zod";
@@ -123,6 +124,10 @@ export function createSpawnAgentTool(
 		description: `Spawn a sub-agent with custom instructions for a specialized task. Waits for the sub-agent to finish and returns its result before your next step.`,
 		inputSchema: zodToJsonSchema(SpawnAgentInputSchema),
 		execute: async (input, context) => {
+			// Wrong-typed arguments (e.g. a non-string `task`) must surface as a
+			// tool error the model can correct, never reach sub-agent lifecycle
+			// observers as a crash.
+			validateWithZod(SpawnAgentInputSchema, input);
 			const tools = config.createSubAgentTools
 				? await config.createSubAgentTools(input, context)
 				: (config.subAgentTools ?? []);

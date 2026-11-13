@@ -391,6 +391,39 @@ describe("createSpawnAgentTool", () => {
 		);
 	});
 
+	it("rejects a non-string task with a tool error before running the sub-agent", async () => {
+		const { createSpawnAgentTool } = await import("./spawn-agent-tool.js");
+		runMock.mockResolvedValue({
+			text: "sub-agent result",
+			iterations: 1,
+			finishReason: "completed",
+			usage: { inputTokens: 1, outputTokens: 1 },
+		});
+		const onSubAgentStart = vi.fn();
+		const onSubAgentEnd = vi.fn();
+		const tool = createSpawnAgentTool({
+			configProvider: createDelegatedAgentConfigProvider({
+				providerId: "anthropic",
+				modelId: "mock-model",
+			}),
+			subAgentTools: [],
+			onSubAgentStart,
+			onSubAgentEnd,
+		});
+		for (const task of [{}, 42, null, ["nested"]]) {
+			await expect(
+				tool.execute({ systemPrompt: "System", task } as never, {
+					agentId: "parent-7",
+					conversationId: "conv-parent",
+					iteration: 1,
+				}),
+			).rejects.toThrow("Invalid input");
+		}
+		expect(runMock).not.toHaveBeenCalled();
+		expect(onSubAgentStart).not.toHaveBeenCalled();
+		expect(onSubAgentEnd).not.toHaveBeenCalled();
+	});
+
 	it("resolves connection settings lazily at execution time", async () => {
 		const { createSpawnAgentTool } = await import("./spawn-agent-tool.js");
 		runMock.mockResolvedValue({
